@@ -805,6 +805,23 @@ function isImplementationChunkType(chunkType: string): boolean {
   ].includes(chunkType);
 }
 
+const CHUNK_TYPE_FILTER_ALIASES = new Map<string, Set<string>>([
+  ["function", new Set(["export_statement", "function_declaration", "function_definition", "function_item", "arrow_function", "decorated_definition", "test_declaration"])],
+  ["class", new Set(["class_declaration", "class_definition"])],
+  ["method", new Set(["method_definition", "method_declaration", "constructor_definition"])],
+  ["interface", new Set(["interface_declaration"])],
+  ["type", new Set(["type_alias_declaration", "type_declaration", "type_spec"])],
+  ["enum", new Set(["enum_declaration", "enum_definition"])],
+  ["struct", new Set(["struct_item", "struct_declaration"])],
+  ["impl", new Set(["impl_item"])],
+  ["trait", new Set(["trait_item", "trait_declaration"])],
+  ["module", new Set(["mod_item"])],
+]);
+
+function matchesChunkTypeFilter(actual: string, requested: string): boolean {
+  return actual === requested || CHUNK_TYPE_FILTER_ALIASES.get(requested)?.has(actual) === true;
+}
+
 function extractIdentifierHints(query: string): string[] {
   const identifiers = query.match(/[A-Za-z_][A-Za-z0-9_]*/g) ?? [];
   return identifiers
@@ -1759,7 +1776,7 @@ function matchesSearchFilters(
       !candidate.metadata.filePath.includes(`${normalizedDir}/`)) return false;
   }
 
-  if (options?.chunkType && candidate.metadata.chunkType !== options.chunkType) {
+  if (options?.chunkType && !matchesChunkTypeFilter(candidate.metadata.chunkType, options.chunkType)) {
     return false;
   }
 
@@ -4787,7 +4804,7 @@ export class Indexer {
       }
 
       if (options?.chunkType) {
-        if (r.metadata.chunkType !== options.chunkType) return false;
+        if (!matchesChunkTypeFilter(r.metadata.chunkType, options.chunkType)) return false;
       }
 
       return true;

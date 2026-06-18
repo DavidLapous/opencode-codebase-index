@@ -148,6 +148,25 @@ describe("files utilities", () => {
       expect(result.files.some((f) => f.path.endsWith("util.ts"))).toBe(true);
     });
 
+    it("should not collect files matching exclude patterns", async () => {
+      fs.mkdirSync(path.join(tempDir, "plugins/git"), { recursive: true });
+      fs.writeFileSync(path.join(tempDir, "keep.ts"), "keep");
+      fs.writeFileSync(path.join(tempDir, "plugins/git/vendor.ts"), "vendor");
+
+      const result = await collectFiles(
+        tempDir,
+        ["**/*.ts"],
+        ["plugins/git/**"],
+        1048576
+      );
+
+      expect(result.files.map((f) => path.relative(tempDir, f.path))).toEqual(["keep.ts"]);
+      expect(result.skipped).toContainEqual({
+        path: path.join("plugins", "git", "vendor.ts"),
+        reason: "excluded",
+      });
+    });
+
     it("should skip files exceeding max size", async () => {
       fs.mkdirSync(path.join(tempDir, "src"), { recursive: true });
       fs.writeFileSync(path.join(tempDir, "src/small.ts"), "x");

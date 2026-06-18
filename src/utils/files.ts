@@ -184,11 +184,9 @@ export async function* walkDirectory(
         continue;
       }
 
-      for (const pattern of excludePatterns) {
-        if (matchGlob(relativePath, pattern)) {
-          skipped.push({ path: relativePath, reason: "excluded" });
-          continue;
-        }
+      if (excludePatterns.some((pattern) => matchGlob(relativePath, pattern))) {
+        skipped.push({ path: relativePath, reason: "excluded" });
+        continue;
       }
 
       let matched = false;

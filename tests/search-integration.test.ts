@@ -211,6 +211,47 @@ export function rerankResults(query: string) { return rankHybridResults(query); 
     expect(topPaths[0]).toContain(path.join("app", "indexer", "index.ts"));
   });
 
+  it("matches parser-specific function chunks when filtering by public function chunk type", async () => {
+    const config = parseConfig({
+      embeddingProvider: "custom",
+      customProvider: {
+        baseUrl: "http://localhost:11434/v1",
+        model: "mock-embedding-model",
+        dimensions: 8,
+      },
+      indexing: {
+        watchFiles: false,
+      },
+      search: {
+        maxResults: 10,
+        minScore: 0,
+        fusionStrategy: "rrf",
+        rrfK: 60,
+        rerankTopN: 20,
+      },
+    });
+
+    const indexer = _indexers[_indexers.push(new Indexer(tempDir, config)) - 1];
+    await indexer.index();
+
+    const searchResults = await indexer.search("rankHybridResults", 5, {
+      metadataOnly: true,
+      filterByBranch: false,
+      chunkType: "function",
+    });
+    expect(searchResults.some((r) => r.name === "rankHybridResults")).toBe(true);
+
+    const similarResults = await indexer.findSimilar(
+      "export function rankHybridResults(query: string) { return query.length; }",
+      5,
+      {
+        filterByBranch: false,
+        chunkType: "function",
+      }
+    );
+    expect(similarResults.some((r) => r.name === "rankHybridResults")).toBe(true);
+  });
+
   it("forces definition lanes for doc-leaning queries when definitionIntent is true", async () => {
     const config = parseConfig({
       embeddingProvider: "custom",
